@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Món Quà Bất Ngờ</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+
+        /* 1. Đồng hồ đếm ngược */
+        #countdown-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #fff; font-size: 80px; font-weight: bold; text-align: center; z-index: 10;
+        }
+        .number-fly {
+            display: inline-block;
+            animation: flyUp 1s ease-in forwards;
+        }
+        @keyframes flyUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-40px); opacity: 0; }
+        }
+
+        /* 2. Ngòi pháo */
+        #fuse-container {
+            position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
+            cursor: pointer; display: none; text-align: center; z-index: 5;
+        }
+        .fuse { width: 10px; height: 100px; background: #5d4037; border-radius: 5px; position: relative; margin: 0 auto; }
+        .spark { 
+            position: absolute; top: -10px; left: -5px; width: 20px; height: 20px; 
+            background: orange; border-radius: 50%; display: none;
+            box-shadow: 0 0 20px yellow;
+        }
+        .instruction { color: #fff; margin-top: 10px; font-style: italic; }
+
+        /* 3. Phong thư Vintage */
+        #envelope {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            width: 200px; height: 140px; background: #8e1a1a; /* Đỏ rượu */
+            border-radius: 5px; cursor: pointer; transition: transform 0.5s;
+            z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #envelope::after {
+            content: ''; position: absolute; top: 0; width: 0; height: 0;
+            border-left: 100px solid transparent; border-right: 100px solid transparent;
+            border-top: 70px solid #a52a2a; transform: translateY(0);
+        }
+        #envelope.show { transform: translate(-50%, -50%) scale(1); }
+
+        /* 4. Nội dung thư */
+        #letter {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; max-width: 500px; background: #fdf5e6; padding: 30px;
+            border-radius: 10px; display: none; z-index: 30; line-height: 1.6;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="countdown-container"></div>
+
+    <div id="fuse-container" onclick="ignite()">
+        <div class="fuse"><div class="spark" id="spark"></div></div>
+        <div class="instruction">Châm ngòi pháo đi...</div>
+    </div>
+
+    <canvas id="fireworks"></canvas>
+
+    <div id="envelope" onclick="openLetter()">
+        <span style="color: gold; font-size: 30px;">✉</span>
+    </div>
+
+    <div id="letter">
+        <h2 style="text-align: center; color: #8e1a1a;">Gửi người mình thương...</h2>
+        <p id="letter-content">
+             Năm mới 2026 đã gõ cửa rồi! ✨
+            
+            Chúc glinh một năm mới tràn đầy năng lượng, sức khỏe dồi dào và gặt hái được thật nhiều thành công.
+            Chúc ngừi đẹp có thể bỏ lại tất cả những cảm xúc tiêu cực ở lại năm cũ và bắt đầu một hành trình mới với niềm vui và hạnh phúc nhớ ^^
+            Chúc choa mỗi ngày của bạn glinh đều tràn ngập niềm vui và năng lượng tích cực nhíe
+        </p>
+        <button onclick="closeLetter()" style="float: right; border: none; background: #8e1a1a; color: #fff; padding: 5px 15px; border-radius: 5px; cursor: pointer;">Đóng</button>
+    </div>
+
+    <script>
+        const countdownEl = document.getElementById('countdown-container');
+        const fuseContainer = document.getElementById('fuse-container');
+        const spark = document.getElementById('spark');
+        const canvas = document.getElementById('fireworks');
+        const ctx = canvas.getContext('2d');
+        const envelope = document.getElementById('envelope');
+        const letter = document.getElementById('letter');
+
+        let timeLeft = 5;
+        let fireworksActive = false;
+
+        // --- 1. Xử lý đếm ngược ---
+        function startCountdown() {
+            if (timeLeft >= 0) {
+                countdownEl.innerHTML = `<div class="number-fly">00:00:0${timeLeft}</div>`;
+                timeLeft--;
+                setTimeout(startCountdown, 1000);
+            } else {
+                countdownEl.style.display = 'none';
+                fuseContainer.style.display = 'block';
+            }
+        }
+        startCountdown();
+
+        // --- 2. Xử lý châm ngòi ---
+        function ignite() {
+            spark.style.display = 'block';
+            fuseContainer.style.transition = 'bottom 2s ease-in';
+            fuseContainer.style.bottom = '120%'; // Bay lên trời
+            
+            setTimeout(() => {
+                fuseContainer.style.display = 'none';
+                fireworksActive = true;
+                createEnvelope(); // Hiện thư sau khi pháo hoa nổ một lúc
+            }, 2000);
+        }
+
+        // --- 3. Hệ thống Pháo hoa (Canvas) ---
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.velocity = { x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 8 };
+                this.alpha = 1;
+                this.friction = 0.95;
+            }
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+            update() {
+                this.velocity.x *= this.friction;
+                this.velocity.y *= this.friction;
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.alpha -= 0.01;
+            }
+        }
+
+        let particles = [];
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (fireworksActive) {
+                if (Math.random() < 0.15) { // Tần suất pháo dày đặc
+                    const x = Math.random() * canvas.width;
+                    const y = Math.random() * canvas.height * 0.5;
+                    const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                    for (let i = 0; i < 40; i++) {
+                        particles.push(new Particle(x, y, color));
+                    }
+                }
+            }
+
+            particles.forEach((p, i) => {
+                if (p.alpha > 0) { p.update(); p.draw(); }
+                else { particles.splice(i, 1); }
+            });
+        }
+        animate();
+
+        // --- 4. Thư ---
+        function createEnvelope() {
+            setTimeout(() => {
+                envelope.classList.add('show');
+            }, 3000);
+        }
+
+        function openLetter() {
+            letter.style.display = 'block';
+            envelope.style.display = 'none';
+        }
+
+        function closeLetter() {
+            letter.style.display = 'none';
+            envelope.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
